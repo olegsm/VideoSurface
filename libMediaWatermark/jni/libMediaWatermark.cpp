@@ -317,6 +317,7 @@ void Render::drawStart()
 
 void Render::drawSetupMatrix()
 {
+    memcpy(mSTMatrix, DEFAULT_TRANSFORMATION, sizeof(float) * VERTEXES_SIZE);
     setIdentityMatrix(mMVPMatrix, 0);
     glUniformMatrix4fv(muMVPMatrixHandle, 1, GL_FALSE, mMVPMatrix);
     glUniformMatrix4fv(muSTMatrixHandle, 1, GL_FALSE, mSTMatrix);

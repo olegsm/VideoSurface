@@ -10,11 +10,11 @@ import android.os.Bundle;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
-import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 
 public class MainActivity extends Activity {
 
-    private FrameLayout mFrame;
+    private LinearLayout mFrame;
     private VideoView mVideoView;
     private View mView;
 
@@ -33,11 +33,11 @@ public class MainActivity extends Activity {
         mFrame.removeView(mView);
         super.onDestroy();
     }
-
+    
     private void start() {
         if (mVideoView == null) {
             Context context = getApplication();
-            mFrame = new FrameLayout(context);
+            mFrame = new LinearLayout(context);
 
             mVideoView = new VideoView(context, mUrl);
             mView = mVideoView.getView();
@@ -52,6 +52,8 @@ public class MainActivity extends Activity {
         private SystemPlayer mPlayer;
         private String mUrl;
         private WMSurfaceHolder mHolder;
+        private int mWidth = 0;
+        private int mHeight = 0;
 
         public VideoView(Context context, final String url) {
             super(context);
@@ -78,6 +80,14 @@ public class MainActivity extends Activity {
             return mHolder != null ? mHolder.getView() : this;
         }
 
+        public int getVideoWidth() {
+            return mWidth;
+        }
+
+        public int getVideoHeight() {
+            return mHeight;
+        }
+
         @Override
         public void surfaceCreated(SurfaceHolder holder) {
             mPlayer = new SystemPlayer(mUrl);
@@ -86,6 +96,8 @@ public class MainActivity extends Activity {
 
         @Override
         public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+            mWidth = width;
+            mHeight = height;
         }
 
         @Override
