@@ -96,7 +96,7 @@ public:
         , mData(0)
     {}
 
-    WatermarkData(JNIEnv* env, jobject bitmap)
+    WatermarkData(JNIEnv* env, jobject bitmap, int32_t maxWidth, int32_t maxHeight)
         : mWidth(0)
         , mHeight(0)
         , mSize(0)
@@ -104,13 +104,36 @@ public:
     {
         AndroidBitmapInfo bitmapInfo;
         AndroidBitmap_getInfo(env, bitmap, &bitmapInfo);
-        mWidth = bitmapInfo.width;
-        mHeight = bitmapInfo.height;
-        mSize = mWidth * mHeight * 4;
+
+        mWidth = maxWidth;
+        mHeight = maxHeight;
+        mSize = mWidth * mHeight * sizeof(uint32_t);
+
+        uint32_t* image = new uint32_t[mWidth * mHeight];
+        memset(image, 0, mSize);
+
+        uint32_t w = bitmapInfo.width;
+        uint32_t h = bitmapInfo.height;
+
+        uint32_t offset = (mWidth * 5) / 100;
+        uint32_t offsetX = mWidth - w - offset;
+        uint32_t offsetY = offset;
 
         void* bitmapPixels = NULL;
         AndroidBitmap_lockPixels(env, bitmap, &bitmapPixels);
-        copy((uint8_t*)bitmapPixels, mSize);
+
+        uint32_t* p = image + offsetY * mWidth + offsetX;
+        uint32_t* wp = (uint32_t*) bitmapPixels;
+
+        for (int i = 0; i < h; i++) {
+            for (int j = 0; j < w; j++) {
+                *p++ = *wp++;
+            }
+            p += mWidth - w;
+        }
+        copy((uint8_t*)image, mSize);
+        delete[] image;
+
         AndroidBitmap_unlockPixels(env, bitmap);
     }
 
@@ -430,7 +453,7 @@ void WatermarkRender::init()
 
     moTextureHandle = glGetUniformLocation(mProgram, "oTexture");
     checkGlError("glGetAttribLocation oTexture");
-    if (maTextureHandle == -1) {
+    if (moTextureHandle == -1) {
         return;
     }
 
@@ -438,6 +461,9 @@ void WatermarkRender::init()
     glBindTexture(GL_TEXTURE_2D, mTexturesWatermark[0]);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mData.mWidth, mData.mHeight,
+        0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
     LOGD("[WatermarkRender] make success mTextureID=%d!", mTextureID);
 }
@@ -456,25 +482,22 @@ void WatermarkRender::drawWatermark(JNIEnv* env)
     glBindTexture(GL_TEXTURE_2D, mTexturesWatermark[0]);
     checkGlError("glBindTexture");
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mData.mWidth, mData.mHeight,
-        0, GL_RGBA, GL_UNSIGNED_BYTE, mData.mData);
-
-    //glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, mData.mWidth, mData.mHeight, GL_RGBA, GL_UNSIGNED_BYTE, mData.mData);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mData.mWidth, mData.mHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, mData.mData);
     checkGlError("texImage2d");
+
     glUniform1i(moTextureHandle, 1);
     checkGlError("oTextureHandle - glUniform1i");
 }
 
-static void media_watermark_init(JNIEnv* env, jobject thiz, jobject jwatermark)
+static void media_watermark_init(JNIEnv* env, jobject thiz, jobject jwatermark, jint maxWidth, jint maxHeight)
 {
     if (!s_render) {
         WatermarkRender* render = new WatermarkRender();
 
-        WatermarkData data(env, jwatermark);
+        WatermarkData data(env, jwatermark, maxWidth, maxHeight);
         render->setData(data);
+        render->init();
         s_render = render;
-        s_render->init();
-
     }
 }
 
@@ -500,10 +523,10 @@ static void media_watermark_draw(JNIEnv* env, jobject thiz, jfloatArray matrix, 
 }
 
 static JNINativeMethod gMethods[] = {
-    { "native_init", "(Landroid/graphics/Bitmap;)V",  (void*) media_watermark_init },
-    { "native_get_textureId", "()I",                  (void*) media_watermark_get_id },
-    { "native_release", "()V",                        (void*) media_watermark_release },
-    { "native_draw", "([FII)V",                       (void*) media_watermark_draw },
+    { "native_init", "(Landroid/graphics/Bitmap;II)V",  (void*) media_watermark_init },
+    { "native_get_textureId", "()I",                    (void*) media_watermark_get_id },
+    { "native_release", "()V",                          (void*) media_watermark_release },
+    { "native_draw", "([FII)V",                         (void*) media_watermark_draw },
 };
 
 #ifndef NELEM

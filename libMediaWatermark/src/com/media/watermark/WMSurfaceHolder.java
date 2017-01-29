@@ -5,7 +5,9 @@ import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.pm.ConfigurationInfo;
+import android.content.res.Resources;
 import android.opengl.GLSurfaceView;
+import android.util.DisplayMetrics;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.View;
@@ -118,12 +120,14 @@ public class WMSurfaceHolder implements GLSurfaceView.Renderer {
 
     @Override
     public void onSurfaceCreated(GL10 gl, EGLConfig config) {
-        native_init(mWatermark);
+        int w = Resources.getSystem().getDisplayMetrics().widthPixels;
+        int h = Resources.getSystem().getDisplayMetrics().heightPixels;
+        native_init(mWatermark, w, h);
         mHolder = new SurfaceTextureHolder(native_get_textureId());
         runInUIThread(mCreatedCallback);
     }
 
-    private native void native_init(Bitmap watermark);
+    private native void native_init(Bitmap watermark, int maxWidth, int maxHeight);
     private native int native_get_textureId();
     private native void native_release();
     private native void native_draw(float[] transformMatrix, int width, int height);
