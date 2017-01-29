@@ -1,2 +1,6 @@
-This library provide watermark appending to vide surface.
-Library will create Surface object, can be applyed to MediaPlayer.
+/libMediaWatermark
+ This library provide watermark appending to vide surface.
+ Library will create Surface object, can be applyed to MediaPlayer.
+ 
+/MediaPlayerApp
+ Simple example of using library.
